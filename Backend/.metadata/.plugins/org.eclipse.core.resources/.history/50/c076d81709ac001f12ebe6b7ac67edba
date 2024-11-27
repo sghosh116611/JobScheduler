@@ -1,0 +1,14 @@
+package com.apica.assignment.backend.service;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class JobSchedulerService {
+
+	private JobScheduler jobSchedular;
+
+	public JobSchedulerService(JobScheduler jobSchedular) {
+		this.jobSchedular = jobSchedular;
+	}
+
+}

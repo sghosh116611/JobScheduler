@@ -1,0 +1,15 @@
+package com.apica.assignment.backend.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import com.apica.assignment.backend.service.JobScheduler;
+
+@Configuration
+public class JobSchedulerConfig {
+
+	@Bean
+	public JobScheduler jobScheduler() {
+		return new ShortestJobFirst();
+	}
+}

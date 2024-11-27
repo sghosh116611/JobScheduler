@@ -1,0 +1,5 @@
+package com.apica.assignment.backend.constant;
+
+public enum JobStatus {
+
+}

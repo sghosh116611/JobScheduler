@@ -1,0 +1,7 @@
+package com.apica.assignment.backend.service;
+
+import com.apica.assignment.backend.model.Job;
+
+public interface JobSchedular {
+	public void submitJob(Job job)
+}

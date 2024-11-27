@@ -1,0 +1,53 @@
+package com.apica.assignment.backend.model;
+
+import java.time.Duration;
+
+import com.apica.assignment.backend.constant.JobStatus;
+
+public class Job {
+    private String id; // Unique ID for the job
+    private String name; // Name of the job
+    private Duration duration; // Duration in seconds or minutes
+    private JobStatus status; // "PENDING", "RUNNING", "COMPLETED"
+
+    public Job(String name, Duration duration) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.duration = duration;
+        this.status = "PENDING";
+    }
+
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public Duration getDuration() {
+		return duration;
+	}
+
+	public void setDuration(Duration duration) {
+		this.duration = duration;
+	}
+
+	public JobStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(JobStatus status) {
+		this.status = status;
+	}
+
+    
+}

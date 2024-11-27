@@ -1,0 +1,67 @@
+package com.apica.assignment.backend.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.apica.assignment.backend.dto.JobRequest;
+import com.apica.assignment.backend.dto.JobResponse;
+import com.apica.assignment.backend.model.Job;
+import com.apica.assignment.backend.service.JobScheduler;
+import com.apica.assignment.backend.service.jobschedular.ShortestJobFirst;
+
+import ch.qos.logback.core.util.Duration;
+
+@RestController
+@RequestMapping("/jobs")
+public class JobController {
+	
+	private final JobScheduler jobScheduler;
+
+    @Autowired
+    public JobController() {
+        // Using ShortestJobFirst implementation for scheduling jobs.
+        this.jobScheduler = new ShortestJobFirst();
+    }
+
+    /**
+     * Endpoint to submit a new job.
+     * @param request The job request containing name and duration.
+     * @return The created job object.
+     */
+    @PostMapping
+    public Job submitJob(@RequestBody JobRequest request) {
+        Job job = new Job(request.getName(), Duration.buildBySeconds(request.getDuration()));
+        jobScheduler.submitJob(job);
+        return job;
+    }
+
+    /**
+     * Endpoint to retrieve the current list of jobs.
+     * @return A list of all jobs in the scheduler.
+     */
+    @GetMapping
+    public List<JobResponse> getAllJobs() {
+        return jobScheduler.getJobQueue()
+                .stream()
+                .map(JobResponse::fromJob)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Fetch the next job to be executed based on SJF.
+     * @return The next job or null if the queue is empty.
+     */
+    @GetMapping("/next")
+    public Job fetchNextJob() {
+        return jobScheduler.fetchNextJob();
+    }
+
+}

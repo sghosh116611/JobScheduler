@@ -1,0 +1,30 @@
+package com.apica.assignment.backend.service;
+
+import java.util.Queue;
+
+import org.springframework.stereotype.Service;
+
+import com.apica.assignment.backend.model.Job;
+
+@Service
+public class JobSchedulerService {
+
+	private JobScheduler jobSchedular;
+
+	public JobSchedulerService(JobScheduler jobSchedular) {
+		this.jobSchedular = jobSchedular;
+	}
+
+	public void submitJob(Job job) {
+		jobSchedular.submitJob(job);
+	}
+
+	public Job fetchNextJob() {
+		return jobSchedular.fetchNextJob();
+	}
+
+	public Queue<Job> getJobQueue() {
+		return jobSchedular.getJobQueue();
+	}
+
+}

@@ -1,0 +1,60 @@
+package com.apica.assignment.backend.service.jobschedular;
+
+import java.util.Comparator;
+import java.util.Queue;
+import java.util.concurrent.PriorityBlockingQueue;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.apica.assignment.backend.constant.JobStatus;
+import com.apica.assignment.backend.dto.JobResponse;
+import com.apica.assignment.backend.model.Job;
+import com.apica.assignment.backend.service.JobScheduler;
+import com.apica.assignment.backend.websocket.JobWebSocketHandler;
+
+public class ShortestJobFirst implements JobScheduler {
+	private final Queue<Job> jobQueue;
+
+	private final JobWebSocketHandler webSocketHandler;
+
+	public ShortestJobFirst() {
+		this.jobQueue = new PriorityBlockingQueue<>(10, Comparator.comparing(Job::getDuration));
+		webSocketHandler = new JobWebSocketHandler();
+	}
+
+	public void submitJob(Job job) {
+		job.setStatus(JobStatus.PENDING);
+		jobQueue.add(job);
+		webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+
+		// Start processing jobs after submitting the job
+		processJobs();
+	}
+
+	public Job fetchNextJob() {
+		return jobQueue.poll();
+	}
+
+	public Queue<Job> getJobQueue() {
+		return jobQueue;
+	}
+
+	public void processJobs() {
+		new Thread(() -> {
+			while (!jobQueue.isEmpty()) {
+				Job job = fetchNextJob();
+				if (job != null) {
+					job.setStatus(JobStatus.ACTIVE);
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+					try {
+						Thread.sleep(job.getDuration().toMillis());
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+					job.setStatus(JobStatus.TERMINATED);
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+				}
+			}
+		}).start();
+	}
+}

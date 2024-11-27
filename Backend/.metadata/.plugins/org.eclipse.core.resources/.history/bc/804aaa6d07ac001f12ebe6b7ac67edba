@@ -1,0 +1,51 @@
+package com.apica.assignment.backend.dto;
+
+public class JobResponse {
+    private String id;
+    private String name;
+    private long duration; // Duration in seconds
+    private String status;
+
+    // Convert a Job to JobResponse
+    public static JobResponse fromJob(Job job) {
+        JobResponse response = new JobResponse();
+        response.setId(job.getId());
+        response.setName(job.getName());
+        response.setDuration(job.getDuration().getSeconds());
+        response.setStatus(job.getStatus());
+        return response;
+    }
+
+    // Getters and Setters
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public void setDuration(long duration) {
+        this.duration = duration;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+}

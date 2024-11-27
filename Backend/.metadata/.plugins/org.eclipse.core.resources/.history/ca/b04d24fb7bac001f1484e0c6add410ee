@@ -1,0 +1,61 @@
+package com.apica.assignment.backend.websocket;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import com.apica.assignment.backend.dto.JobResponse;
+
+@Component
+public class JobWebSocketHandler extends TextWebSocketHandler {
+
+	private static final String CLASSNAME = JobWebSocketHandler.class.toString();
+	private static final Logger logger = Logger.getLogger(CLASSNAME);
+
+	private static final Set<WebSocketSession> sessions = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+	@Override
+	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+		String methodName = "afterConnectionEstablished";
+		sessions.add(session);
+		logger.logp(Level.FINEST, CLASSNAME, methodName, "WebSocket connection established: " + session.getId());
+	}
+
+	@Override
+	public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+		String methodName = "afterConnectionClosed";
+		sessions.remove(session);
+		logger.logp(Level.FINEST, CLASSNAME, methodName, "WebSocket connection closed: " + session.getId());
+
+	}
+
+	public void broadcastJobStatus(JobResponse jobResponse) {
+		String methodName = "broadcastJobStatus";
+		String message = String.format("Job %s is now %s", jobResponse.getName(), jobResponse.getStatus());
+		logger.logp(Level.FINEST, CLASSNAME, methodName, "Broadcasting message: " + message);
+
+		for (WebSocketSession session : sessions) {
+			try {
+				logger.logp(Level.FINEST, CLASSNAME, methodName,
+						"Checking if session is open: " + session.getId() + " -> " + session.isOpen());
+				if (session.isOpen()) {
+					session.sendMessage(new TextMessage(message));
+					logger.logp(Level.FINEST, CLASSNAME, methodName, "Sent message to session: " + session.getId());
+				} else {
+					logger.logp(Level.FINEST, CLASSNAME, methodName, "Session is not open: " + session.getId());
+				}
+			} catch (IOException e) {
+				logger.logp(Level.SEVERE, CLASSNAME, methodName, "Error sending WebSocket message: " + e.getMessage());
+			}
+		}
+	}
+}

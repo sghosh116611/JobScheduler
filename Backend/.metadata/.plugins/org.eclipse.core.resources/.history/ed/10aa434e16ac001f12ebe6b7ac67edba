@@ -1,0 +1,92 @@
+package com.apica.assignment.backend.service.jobschedular;
+
+import java.util.Comparator;
+import java.util.Queue;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.apica.assignment.backend.constant.JobStatus;
+import com.apica.assignment.backend.dto.JobResponse;
+import com.apica.assignment.backend.model.Job;
+import com.apica.assignment.backend.service.JobScheduler;
+import com.apica.assignment.backend.websocket.JobWebSocketHandler;
+
+public class ShortestJobFirst implements JobScheduler {
+
+	private static String CLASSNAME = ShortestJobFirst.class.toString();
+	private static final Logger logger = Logger.getLogger(CLASSNAME);
+	
+	// Queue to store the jobs
+	private static final Queue<Job> jobQueue = new PriorityBlockingQueue<>(2, Comparator.comparing(Job::getDuration)); 
+
+	private final JobWebSocketHandler webSocketHandler;
+	private static boolean isProcessing = false;
+
+	public ShortestJobFirst() {
+		webSocketHandler = new JobWebSocketHandler();
+	}
+
+	public void submitJob(Job job) {
+		String methodName = "submitJob";
+
+		logger.logp(Level.INFO, CLASSNAME, methodName, "Start of submitJob");
+		job.setStatus(JobStatus.PENDING);
+		jobQueue.add(job);
+		webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job)); // Broadcast job status to WebSocket
+
+		// Start processing jobs only if not already processing
+		if (!isProcessing) {
+			processJobs();
+		}
+		logger.logp(Level.INFO, CLASSNAME, methodName, "End of submitJob");
+	}
+
+	public Job fetchNextJob() {
+		return jobQueue.poll();
+	}
+
+	public Queue<Job> getJobQueue() {
+		return jobQueue;
+	}
+
+	public void processJobs() {
+		// Ensure job processing is only initiated once at a time
+		if (isProcessing) {
+			return; // If already processing, do nothing
+		}
+
+		isProcessing = true; // Mark processing as started
+
+		// Process jobs in a separate thread to avoid blocking the main thread
+		new Thread(() -> {
+			while (!jobQueue.isEmpty()) {
+				Job job = fetchNextJob();
+				if (job != null) {
+					// Mark job as active and broadcast status
+					job.setStatus(JobStatus.ACTIVE);
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+
+					try {
+						// Simulate job execution (replace with actual job logic)
+						Thread.sleep(job.getDuration().toSeconds() * 1000); // Convert to milliseconds
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+
+					// Mark job as terminated and broadcast status
+					job.setStatus(JobStatus.TERMINATED);
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+				}
+			}
+
+			// Once all jobs are processed, mark processing as complete
+			isProcessing = false;
+
+			// If new jobs are added while processing, we trigger the job processing again
+			if (!jobQueue.isEmpty()) {
+				processJobs();
+			}
+		}).start();
+	}
+}

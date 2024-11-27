@@ -1,0 +1,5 @@
+package com.apica.assignment.backend.service;
+
+public class JobSchedulerService {
+
+}

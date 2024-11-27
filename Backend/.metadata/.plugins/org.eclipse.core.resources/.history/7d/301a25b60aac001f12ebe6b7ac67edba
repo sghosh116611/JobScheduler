@@ -1,0 +1,45 @@
+package com.apica.assignment.backend.service.jobschedular;
+
+import java.util.Comparator;
+import java.util.Queue;
+import java.util.concurrent.PriorityBlockingQueue;
+
+import com.apica.assignment.backend.constant.JobStatus;
+import com.apica.assignment.backend.dto.JobResponse;
+import com.apica.assignment.backend.model.Job;
+import com.apica.assignment.backend.service.JobScheduler;
+
+public class ShortestJobFirst implements JobScheduler {
+	private final Queue<Job> jobQueue;
+
+	public ShortestJobFirst() {
+		this.jobQueue = new PriorityBlockingQueue<>(10, Comparator.comparing(Job::getDuration));
+	}
+
+	public void submitJob(Job job) {
+		jobQueue.add(job);
+	}
+
+	public Queue<Job> getJobQueue() {
+		return jobQueue;
+	}
+
+	public default void processJobs() {
+		new Thread(() -> {
+			while (!jobQueue.isEmpty()) {
+				Job job = fetchNextJob();
+				if (job != null) {
+					job.setStatus(JobStatus.ACTIVE);
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+					try {
+						Thread.sleep(job.getDuration().toMillis());
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+					job.setStatus("CLOSED");
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+				}
+			}
+		}).start();
+	}
+}

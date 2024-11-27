@@ -1,0 +1,12 @@
+package com.apica.assignment.backend.service;
+
+import java.util.Queue;
+import java.util.concurrent.PriorityBlockingQueue;
+
+import com.apica.assignment.backend.model.Job;
+
+public interface JobScheduler {
+	public void submitJob(Job job);
+	public Job fetchNextJob();
+	public Queue<Job> getJobQueue();
+}

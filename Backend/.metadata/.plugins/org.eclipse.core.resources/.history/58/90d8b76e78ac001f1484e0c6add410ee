@@ -1,0 +1,101 @@
+package com.apica.assignment.backend.service.jobschedular;
+
+import java.util.Comparator;
+import java.util.Queue;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.apica.assignment.backend.constant.JobStatus;
+import com.apica.assignment.backend.dto.JobResponse;
+import com.apica.assignment.backend.model.Job;
+import com.apica.assignment.backend.service.JobScheduler;
+import com.apica.assignment.backend.websocket.JobWebSocketHandler;
+
+public class ShortestJobFirst implements JobScheduler {
+
+	private static String CLASSNAME = ShortestJobFirst.class.toString();
+	private static final Logger logger = Logger.getLogger(CLASSNAME);
+
+	// Queue to store the jobs
+	private static final Queue<Job> jobQueue = new PriorityBlockingQueue<>(2, Comparator.comparing(Job::getDuration));
+
+	private final JobWebSocketHandler webSocketHandler;
+	private static boolean isProcessing = false;
+
+	public ShortestJobFirst() {
+		webSocketHandler = new JobWebSocketHandler();
+	}
+
+	public void submitJob(Job job) {
+		String methodName = "submitJob";
+
+		logger.logp(Level.INFO, CLASSNAME, methodName, "Start of submitJob");
+		jobs.put(job.getName(), JobStatus.PENDING);
+		job.setStatus(JobStatus.PENDING);
+		jobQueue.add(job);
+		webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job)); // Broadcasting job status to WebSocket
+
+		// Starting to process jobs only if not already processing
+		if (!isProcessing) {
+			processJobs();
+		}
+		logger.logp(Level.INFO, CLASSNAME, methodName, "End of submitJob");
+	}
+
+	public Job fetchNextJob() {
+		return jobQueue.poll();
+	}
+
+	public Queue<Job> getJobQueue() {
+		return jobQueue;
+	}
+
+	public void processJobs() {
+		String methodName = "processJobs";
+
+		logger.logp(Level.INFO, CLASSNAME, methodName, "Start of processJobs");
+		// Ensure job processing is initiated only once at a time
+		if (isProcessing) {
+			return;
+		}
+
+		isProcessing = true;
+
+		// Processing jobs in threads
+		new Thread(() -> {
+			while (!jobQueue.isEmpty()) {
+				Job job = fetchNextJob();
+				if (job != null) {
+					logger.logp(Level.FINE, CLASSNAME, methodName, "Processing job --" + job.getName());
+					// Mark job as active and broadcast status
+					jobs.put(job.getName(), JobStatus.ACTIVE);
+					job.setStatus(JobStatus.ACTIVE);
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+					logger.logp(Level.FINEST, CLASSNAME, methodName, "Starting job execution");
+					try {
+						// Simulate job execution (replace with actual job logic)
+						Thread.sleep(job.getDuration().toSeconds() * 1000); // Convert to milliseconds
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+					logger.logp(Level.FINEST, CLASSNAME, methodName, "Ending job execution");
+					// Mark job as terminated and broadcast status
+					jobs.put(job.getName(), JobStatus.TERMINATED);
+					job.setStatus(JobStatus.TERMINATED);
+					webSocketHandler.broadcastJobStatus(JobResponse.fromJob(job));
+				}
+			}
+
+			// Mark processing as complete once job execution is completed
+			isProcessing = false;
+
+			// Trigger the job processing if job queue is not empty
+			if (!jobQueue.isEmpty()) {
+				processJobs();
+			}
+		}).start();
+
+		logger.logp(Level.INFO, CLASSNAME, methodName, "End of processJobs");
+	}
+}

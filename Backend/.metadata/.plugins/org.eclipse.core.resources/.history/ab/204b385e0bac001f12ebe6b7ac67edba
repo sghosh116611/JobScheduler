@@ -1,0 +1,7 @@
+package com.apica.assignment.backend.constant;
+
+public enum JobStatus {
+	PENDING,
+	RUNNING,
+	ACTIVE
+}

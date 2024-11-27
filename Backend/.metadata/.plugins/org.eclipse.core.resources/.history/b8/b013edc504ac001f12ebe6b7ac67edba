@@ -1,0 +1,17 @@
+package com.apica.assignment.backend.model;
+
+public class Job {
+    private String id; // Unique ID for the job
+    private String name;
+    private Duration duration; // Duration in seconds or minutes
+    private String status; // "PENDING", "RUNNING", "COMPLETED"
+
+    public Job(String name, Duration duration) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.duration = duration;
+        this.status = "PENDING";
+    }
+
+    // Getters and Setters
+}

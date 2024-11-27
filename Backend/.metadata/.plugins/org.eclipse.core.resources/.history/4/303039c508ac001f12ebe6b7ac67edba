@@ -1,0 +1,82 @@
+package com.apica.assignment.backend.controller;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.apica.assignment.backend.dto.JobRequest;
+import com.apica.assignment.backend.dto.JobResponse;
+import com.apica.assignment.backend.model.Job;
+import com.apica.assignment.backend.service.JobScheduler;
+import com.apica.assignment.backend.service.jobschedular.ShortestJobFirst;
+import com.apica.assignment.backend.util.JobRequestValidator;
+
+
+
+@RestController
+@RequestMapping("/jobs")
+public class JobController {
+	
+	private final JobScheduler jobScheduler;
+
+    @Autowired
+    public JobController() {
+        // Using ShortestJobFirst implementation for scheduling jobs.
+        this.jobScheduler = new ShortestJobFirst();
+    }
+
+    /**
+     * Endpoint to submit a new job.
+     *
+     * @param request The job request containing name and duration.
+     * @return ResponseEntity with the created job and HTTP status.
+     */
+    @PostMapping
+    public ResponseEntity<JobResponse> submitJob(@RequestBody JobRequest request) {
+        if (!JobRequestValidator.isInvalidJobRequest(request)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new JobResponse("Invalid request data", null, 0, null));
+        }
+        Job job = new Job(request.getName(), Duration.ofSeconds(request.getDuration()));
+        jobScheduler.submitJob(job);
+        return ResponseEntity.status(HttpStatus.CREATED).body(JobResponse.fromJob(job));
+    }
+
+    /**
+     * Endpoint to retrieve the current list of jobs.
+     *
+     * @return ResponseEntity with the list of jobs and HTTP status.
+     */
+    @GetMapping
+    public ResponseEntity<List<JobResponse>> getAllJobs() {
+        List<JobResponse> jobs = jobScheduler.getJobQueue()
+                .stream()
+                .map(JobResponse::fromJob)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(jobs);
+    }
+
+    /**
+     * Fetch the next job to be executed based on SJF.
+     *
+     * @return ResponseEntity with the next job or HTTP 204 if the queue is empty.
+     */
+    @GetMapping("/next")
+    public ResponseEntity<JobResponse> fetchNextJob() {
+        Job nextJob = jobScheduler.fetchNextJob();
+        if (nextJob == null) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
+        return ResponseEntity.ok(JobResponse.fromJob(nextJob));
+    }
+}
